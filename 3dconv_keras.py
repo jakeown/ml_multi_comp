@@ -41,12 +41,13 @@ img_rows=10
 img_cols = 10
 img_depth = 500
 
-patch_size = 500
-
 #single = glob.glob('3d_gauss_train/*.fits')
 #multi = glob.glob('3d_gauss_train_multi/*.fits')
 
 def get_train_set(single, multi):
+	# Older way of loading test set
+	# Loads individual training fits files one-by-one
+	# Replaced by get_train_set2, which loads two h5 file
 	train_data = []
 	labels = []
 	count=0
@@ -73,6 +74,9 @@ def get_train_set(single, multi):
 	return numpy.array(train_data), numpy.array(labels)
 
 def get_train_set2(start=0, length=200):
+	# Quicker data loading method
+	# Data is stored and loaded in two h5 files
+	# One with training data, other with training labels
 	print 'Loading Training Data...'
 	with h5py.File('training.h5', 'r') as hf:
 		X = hf['data'][:]
@@ -83,6 +87,8 @@ def get_train_set2(start=0, length=200):
 	return X, y
 
 def get_val_set2(start=0, length=200):
+	# Same as above for train set
+	# Should condense these into one function
 	print 'Loading Training Data...'
 	with h5py.File('testing.h5', 'r') as hf:
 		X = hf['data'][:]
@@ -92,16 +98,9 @@ def get_val_set2(start=0, length=200):
 	hf.close()
 	return X, y
 
+# Load training data and reshape
 X_train_new, y_train_new = get_train_set2()
 print X_train_new.shape
-
-# CNN Training parameters
-
-#batch_size = 2
-#nb_classes = 2
-#nb_epoch =50
-
-# convert class vectors to binary class matrices
 X_train_new = X_train_new.reshape(X_train_new.shape[0], img_rows, img_cols*img_depth)
 
 # Define model
@@ -122,5 +121,5 @@ X_val_new = X_val_new.reshape(X_val_new.shape[0], img_rows, img_cols*img_depth)
 scores = model.evaluate(X_val_new, y_val_new, verbose=0)
 print("Accuracy: %.2f%%" % (scores[1]*100))
 
-model.save("model_3layer_40000.h5")
+model.save("model_3layer_44000.h5")
 print("Saved model to disk")
