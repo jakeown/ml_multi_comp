@@ -7,16 +7,12 @@ img_rows=10
 img_cols = 10
 img_depth = 500
 
-def padwithtens(vector, pad_width, iaxis, kwargs):
-	vector[:pad_width[0]] = 2
-	vector[-pad_width[1]:] = 2
-	return vector
-
 def test_data(f='CygX_N_13CO_conv_test_smooth_clip.fits', c=1):
 	# c is the class of the test data (0=single, 1=multi)
 	data = fits.getdata(f)
 	header = fits.getheader(f)
 	print data.shape
+	# Create a 2D array to place ouput predictions
 	out_arr = data[0].copy()
 	out_arr[:]=numpy.nan
 	
@@ -43,9 +39,12 @@ def test_data(f='CygX_N_13CO_conv_test_smooth_clip.fits', c=1):
 	scores = new_model.evaluate(X_val_new, y_val_new, verbose=0)
 	print("Accuracy: %.2f%%" % (scores[1]*100))
 	
+	# Make prediction on each pixel and output as 2D fits image
 	predictions = new_model.predict(X_val_new, verbose=0)
+	# Reshape to get back 2D structure
 	predictions = predictions.reshape(wshape[0], wshape[1])
 	out_arr[4:4+predictions.shape[0], 4:4+predictions.shape[1]]=predictions
+	# Format 3D header for 2D data
 	del header['NAXIS3']
 	del header['LBOUND3']
 	#del header['OBS3']
