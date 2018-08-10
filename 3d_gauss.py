@@ -24,6 +24,13 @@ x, y, z = np.mgrid[-1.0:1.0:500j, -1.0:1.0:10j, -1.0:1.0:10j]
 xy = np.column_stack([x.flat, y.flat, z.flat])
 
 def get_train_single(num=100, multi=False, noise_only=False, close=False):
+	# Creates a 10x10 sythetic spectral cube used as a single training example
+	# Either a single gaussian, or two gaussians are injected into the frame
+	# num: sets number of samples to create
+	# multi: True if two gaussian are to be injected
+	# noise_only: True if sample is just noise (no gaussian injected)
+	# close: True if multi-comp sample is to have a small spectral velocity difference
+
 	if multi:
 		filename = '3d_gauss_train_multi' +'.h5'
 	else:
@@ -31,11 +38,14 @@ def get_train_single(num=100, multi=False, noise_only=False, close=False):
 	f = file(filename, mode='w')
 	f.close()
 	print "Creating Training Samples..."
+	# Set the limits of the 3D gaussian parameters
+	# sample parameters drawn randomly from these limits
 	mu_range_spectral = [-0.7, 0.7]
 	sigma_range_spectral = [0.01, 0.1]
 	mu_range_xy = [-0.6, 0.6]
 	sigma_range_xy = [0.2, 0.8]
 
+	# Randomly select parameters for the samples
 	mu_spectral = numpy.random.uniform(mu_range_spectral[0], mu_range_spectral[1], size=(num,1))
 	mu_xy = numpy.random.uniform(mu_range_xy[0], mu_range_xy[1], size=(num, 2))
 	mu = numpy.column_stack((mu_spectral, mu_xy))
@@ -44,6 +54,7 @@ def get_train_single(num=100, multi=False, noise_only=False, close=False):
 	sigma_xy = numpy.random.uniform(sigma_range_xy[0], sigma_range_xy[1], size=(num, 2))
 	sigma = numpy.column_stack((sigma_spectral, sigma_xy))
 
+	# Make the second component zero if single-component sample
 	mu2 = numpy.zeros(num)
 	sigma2 = numpy.zeros(num)
 
@@ -61,6 +72,7 @@ def get_train_single(num=100, multi=False, noise_only=False, close=False):
 		sigma_xy = numpy.random.uniform(sigma_range_xy[0], sigma_range_xy[1], size=(num, 2))
 		sigma2 = numpy.column_stack((sigma_spectral, sigma_xy))
 
+	# Loop through parameters and generate 3D cubes
 	counter = 0
 	out = []
 	for mu, sigma, mu2, sigma2, ind in zip(mu, sigma, mu2, sigma2, range(num)):
@@ -73,6 +85,7 @@ def get_train_single(num=100, multi=False, noise_only=False, close=False):
 	return out
 
 def grab_single(mu, sigma, mu2, sigma2, ind, multi=False, filename=False, noise_only=False):
+	# Takes input gaussian parameters and generates a 3D cube
 	covariance = np.diag(sigma**2)
 	z = multivariate_normal.pdf(xy, mean=mu, cov=covariance)
 
@@ -98,8 +111,11 @@ def grab_single(mu, sigma, mu2, sigma2, ind, multi=False, filename=False, noise_
 	return z
 
 def add_noise(z, max_noise=0.4):
+	# Adds noise to each synthetic spectrum
+	# First, randomly select the noise strength (up to max_noise)
 	mn = numpy.random.uniform(0.1, max_noise, size=1)
 	for (i,j), value in np.ndenumerate(z[0]):
+		# Next, add random noise with max strength as chosen above
 		noise=np.random.uniform(-mn[0],mn[0],len(z[:,i,j]))
 		z[:,i,j] = z[:,i,j] + noise
 	return z
@@ -113,6 +129,7 @@ out22 = get_train_single(num=4000, multi=True, noise_only=False, close=True)
 out1.extend(out11)
 out2.extend(out22)
 out1.extend(out2)
+# Save training examples to h5 files for quicker loading
 with h5py.File('training.h5', 'w') as hf:
 	hf.create_dataset('data', data=numpy.array(out1))
 	hf.close()
@@ -125,6 +142,7 @@ del out2
 del out11 
 del out22
 
+# Repeat for test set
 out1 = get_train_single(num=10000, noise_only=False)
 out11 = get_train_single(num=1000, noise_only=True)
 out2 = get_train_single(num=10000, multi=True, noise_only=False)
